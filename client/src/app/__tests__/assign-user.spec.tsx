@@ -1,17 +1,23 @@
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  within,
+  cleanup,
+} from "@testing-library/react";
 import { AssignUserModal } from "../components/assign-user";
 import { useUsers } from "../hooks/useUsers";
-import { useTickets } from "../hooks/useTickets";
+import { useAssignUser } from "../hooks/useTickets";
 
 jest.mock("../hooks/useUsers");
 jest.mock("../hooks/useTickets");
 
 const mockUseUsers = useUsers as jest.Mock;
-const mockUseTickets = useTickets as jest.Mock;
+const mockUseAssignUser = useAssignUser as jest.Mock;
 
 describe("AssignUserModal Component", () => {
   const mockOnClose = jest.fn();
-  const mockAssignUser = jest.fn();
+  const mockMutate = jest.fn();
   const mockUsers = [
     { id: 1, name: "Alice" },
     { id: 2, name: "Bob" },
@@ -25,11 +31,13 @@ describe("AssignUserModal Component", () => {
       usersQuery: { isLoading: false },
     });
 
-    mockUseTickets.mockReturnValue({
-      assignUser: mockAssignUser,
-      isAssigning: false,
+    mockUseAssignUser.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
     });
   });
+
+  afterEach(cleanup);
 
   const defaultProps = {
     open: true,
@@ -59,7 +67,11 @@ describe("AssignUserModal Component", () => {
     const confirmButton = screen.getByRole("button", { name: /Confirm/i });
     fireEvent.click(confirmButton);
 
-    expect(mockAssignUser).toHaveBeenCalledWith({ ticketId: 101, userId: 1 });
-    expect(mockOnClose).toHaveBeenCalled();
+    expect(mockMutate).toHaveBeenCalledWith(
+      { ticketId: 101, userId: 1 },
+      expect.objectContaining({
+        onSettled: expect.any(Function),
+      }),
+    );
   });
 });

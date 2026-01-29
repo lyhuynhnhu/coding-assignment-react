@@ -1,19 +1,19 @@
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { CreateTicketModal } from "../components/create-ticket";
-import { useTickets } from "../hooks/useTickets";
+import { useCreateTicket } from "../hooks/useTickets";
 
 jest.mock("../hooks/useTickets");
 
-const mockUseTickets = useTickets as jest.MockedFunction<typeof useTickets>;
+const mockUseCreateTicket = useCreateTicket as jest.Mock;
 
 describe("CreateTicketModal Component", () => {
-  const mockCreateTicket = jest.fn();
+  const mockMutate = jest.fn();
 
   beforeEach(() => {
-    mockUseTickets.mockReturnValue({
-      createTicket: mockCreateTicket,
-      isCreating: false,
-    } as any);
+    mockUseCreateTicket.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    });
   });
 
   afterEach(cleanup);
@@ -34,7 +34,7 @@ describe("CreateTicketModal Component", () => {
     const submitButton = screen.getByRole("button", { name: /Create Ticket/i });
     fireEvent.click(submitButton);
 
-    expect(mockCreateTicket).toHaveBeenCalledWith({
+    expect(mockMutate).toHaveBeenCalledWith({
       description: "Test new ticket",
     });
   });

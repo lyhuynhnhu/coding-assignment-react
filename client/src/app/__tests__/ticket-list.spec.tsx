@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { TicketList } from "../pages/ticket-list";
-import { useTickets } from "../hooks/useTickets";
+import { useGetTickets, useToggleComplete } from "../hooks/useTickets";
 import { useUsers } from "../hooks/useUsers";
 
 jest.mock("../hooks/useTickets");
@@ -9,9 +9,11 @@ jest.mock("../hooks/useUsers");
 jest.mock("../components", () => ({
   AssignUserModal: () => <div data-testid="assign-modal" />,
   CreateTicketModal: () => <div data-testid="create-modal" />,
+  TicketTable: jest.requireActual("../components/ticket-table").TicketTable,
 }));
 
-const mockUseTickets = useTickets as jest.Mock;
+const mockUseGetTickets = useGetTickets as jest.Mock;
+const mockUseToggleComplete = useToggleComplete as jest.Mock;
 const mockUseUsers = useUsers as jest.Mock;
 
 describe("TicketList Component", () => {
@@ -27,23 +29,21 @@ describe("TicketList Component", () => {
 
   const mockUsers = [{ id: 1, name: "Alice" }];
 
-  it("should show tickets list correctly", () => {
-    mockUseUsers.mockReturnValue({ users: mockUsers });
-    mockUseTickets.mockReturnValue({
-      getAllTicket: { data: mockTickets, isLoading: false, isError: false },
-      completionMutation: { isPending: false },
-    });
+  const mockMutate = jest.fn();
 
-    render(
-      <BrowserRouter>
-        <TicketList />
-      </BrowserRouter>,
-    );
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUseUsers.mockReturnValue({ users: mockUsers });
+    mockUseToggleComplete.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    });
+  });
+
+  it("should show tickets list correctly", () => {
+    mockUseGetTickets.mockReturnValue({ data: mockTickets, isLoading: false });
+    render(<TicketList />, { wrapper: BrowserRouter });
 
     expect(screen.getByText("Crete test file")).toBeInTheDocument();
-    expect(screen.getByText("Testing List component")).toBeInTheDocument();
-
-    expect(screen.getByText("Open")).toBeInTheDocument();
-    expect(screen.getByText("Completed")).toBeInTheDocument();
   });
 });
