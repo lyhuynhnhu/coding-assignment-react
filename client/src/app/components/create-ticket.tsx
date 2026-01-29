@@ -11,7 +11,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { AddCircleOutlineRounded } from "@mui/icons-material";
-import { useTickets } from "../../hooks/useTickets";
+import { useTickets } from "../hooks/useTickets";
 
 export const CreateTicketModal = () => {
   const [open, setOpen] = useState(false);

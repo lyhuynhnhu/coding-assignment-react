@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
-import { CreateTicketModal } from "../components/modal/create-ticket";
+import { CreateTicketModal } from "../components/create-ticket";
 import { useTickets } from "../hooks/useTickets";
 
 jest.mock("../hooks/useTickets");

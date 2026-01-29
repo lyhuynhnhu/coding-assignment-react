@@ -6,7 +6,7 @@ import { useUsers } from "../hooks/useUsers";
 
 jest.mock("../hooks/useTickets");
 jest.mock("../hooks/useUsers");
-jest.mock("../components/modal", () => ({
+jest.mock("../components", () => ({
   AssignUserModal: () => <div data-testid="assign-modal" />,
   CreateTicketModal: () => <div data-testid="create-modal" />,
 }));

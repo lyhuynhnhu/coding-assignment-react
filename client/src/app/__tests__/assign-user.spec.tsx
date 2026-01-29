@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, within } from "@testing-library/react";
-import { AssignUserModal } from "../components/modal/assign-user";
+import { AssignUserModal } from "../components/assign-user";
 import { useUsers } from "../hooks/useUsers";
 import { useTickets } from "../hooks/useTickets";
 

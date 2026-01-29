@@ -2,43 +2,27 @@ import {
   Box,
   Button,
   Container,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
   Stack,
-  Chip,
-  IconButton,
-  Tooltip,
   CircularProgress,
   Alert,
-  Typography,
 } from "@mui/material";
 import {
-  Visibility,
   Refresh,
-  PersonAddRounded,
-  DoneAllRounded,
-  RemoveDoneRounded,
 } from "@mui/icons-material";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AssignUserModal, CreateTicketModal } from "../components/modal";
+import { AssignUserModal, CreateTicketModal, TicketTable } from "../components";
 import { useTickets } from "../hooks/useTickets";
 import { useUsers } from "../hooks/useUsers";
-import { Ticket } from "@acme/shared-models";
 
 export const TicketList = () => {
   const [filter, setFilter] = useState("all");
   const navigate = useNavigate();
-  const { getAllTicket, toggleCompletion, completionMutation } = useTickets();
+  const { getAllTicket, completionMutation } = useTickets();
   const { users } = useUsers();
 
   const { data: tickets, isLoading, isError, refetch } = getAllTicket;
@@ -69,6 +53,34 @@ export const TicketList = () => {
       return true;
     });
   }, [tickets, filter]);
+
+  const handleOpenAssignModal = (
+    ticketId: number,
+    currentAssigneeId: number | null,
+  ) => {
+    setAssignDialog({
+      open: true,
+      ticketId,
+      currentId: currentAssigneeId,
+    });
+  };
+
+  const handleViewDetail = (id: number) => {
+    navigate(`/${id}`);
+  };
+
+  const handleToggleStatus = (ticketId: number, currentStatus: boolean) => {
+    setUpdatingId(ticketId);
+    completionMutation.mutate(
+      {
+        ticketId: ticketId,
+        completed: !currentStatus,
+      },
+      {
+        onSettled: () => setUpdatingId(null),
+      },
+    );
+  };
 
   if (isLoading)
     return (
@@ -121,140 +133,15 @@ export const TicketList = () => {
         <CreateTicketModal />
       </Stack>
 
-      {/* Table */}
-      <TableContainer component={Paper} elevation={3}>
-        <Table stickyHeader>
-          <TableHead
-            sx={{
-              "& .MuiTableCell-head": {
-                bgcolor: "#f4f4f5",
-                letterSpacing: 0.2,
-                color: "text.primary",
-                fontWeight: 600,
-              },
-            }}
-          >
-            <TableRow sx={{ fontWeight: 500 }}>
-              <TableCell>ID</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Assignee</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredTickets?.map((ticket) => {
-              const isUpdating =
-                completionMutation.isPending && updatingId === ticket.id;
-
-              return (
-                <TableRow key={ticket.id} hover>
-                  <TableCell>#{ticket.id}</TableCell>
-                  <TableCell
-                    sx={{
-                      maxWidth: 300,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {ticket.description}
-                  </TableCell>
-                  <TableCell>
-                    {ticket.assigneeId && getAssigneeName(ticket.assigneeId)}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={ticket.completed ? "Completed" : "Open"}
-                      color={ticket.completed ? "success" : "warning"}
-                      variant="outlined"
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Stack
-                      direction="row"
-                      spacing={0.5}
-                      justifyContent="flex-end"
-                    >
-                      <Tooltip title="View Details">
-                        <IconButton
-                          size="small"
-                          disabled={isUpdating}
-                          onClick={() => navigate(`/${ticket.id}`)}
-                        >
-                          <Visibility fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Assign User">
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          disabled={isUpdating}
-                          onClick={() =>
-                            setAssignDialog({
-                              open: true,
-                              ticketId: ticket.id,
-                              currentId: ticket.assigneeId,
-                            })
-                          }
-                        >
-                          <PersonAddRounded fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-
-                      <Tooltip
-                        title={
-                          ticket.completed
-                            ? "Mark as Open"
-                            : "Mark as Completed"
-                        }
-                      >
-                        <IconButton
-                          size="small"
-                          color={ticket.completed ? "error" : "success"}
-                          disabled={isUpdating}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setUpdatingId(ticket.id);
-                            completionMutation.mutate(
-                              {
-                                ticketId: ticket.id,
-                                completed: !ticket.completed,
-                              },
-                              {
-                                onSettled: () => setUpdatingId(null),
-                              },
-                            );
-                          }}
-                        >
-                          {isUpdating ? (
-                            <CircularProgress size={20} color="inherit" />
-                          ) : ticket.completed ? (
-                            <RemoveDoneRounded fontSize="small" />
-                          ) : (
-                            <DoneAllRounded fontSize="small" />
-                          )}
-                        </IconButton>
-                      </Tooltip>
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-
-            {filteredTickets.length === 0 && !isLoading && (
-              <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
-                  <Typography color="text.secondary">
-                    No tickets found.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <TicketTable
+        data={filteredTickets}
+        isLoading={isLoading}
+        updatingId={updatingId}
+        getAssigneeName={getAssigneeName}
+        onView={handleViewDetail}
+        onAssign={handleOpenAssignModal}
+        onToggleStatus={handleToggleStatus}
+      />
 
       <AssignUserModal
         open={assignDialog.open}

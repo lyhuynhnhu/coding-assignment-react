@@ -13,8 +13,8 @@ import {
   Typography,
   Box,
 } from "@mui/material";
-import { useUsers } from "../../hooks/useUsers";
-import { useTickets } from "../../hooks/useTickets";
+import { useUsers } from "../hooks/useUsers";
+import { useTickets } from "../hooks/useTickets";
 
 interface AssignUserDialogProps {
   open: boolean;
