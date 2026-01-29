@@ -14,7 +14,7 @@ import {
   Box,
 } from "@mui/material";
 import { useUsers } from "../hooks/useUsers";
-import { useTickets } from "../hooks/useTickets";
+import { useAssignUser } from "../hooks/useTickets";
 
 interface AssignUserDialogProps {
   open: boolean;
@@ -29,9 +29,9 @@ export const AssignUserModal = ({
   ticketId,
   currentAssigneeId,
 }: AssignUserDialogProps) => {
-  const { users, usersQuery } = useUsers();
-  const { assignUser, isAssigning } = useTickets();
-  
+  const { data: users, isLoading } = useUsers();
+  const assignUser = useAssignUser();
+
   const [selectedUserId, setSelectedUserId] = useState<number | string>("");
 
   useEffect(() => {
@@ -45,9 +45,15 @@ export const AssignUserModal = ({
 
     const userId = selectedUserId === "" ? undefined : Number(selectedUserId);
 
-    assignUser({ ticketId, userId });
-    onClose();
+    assignUser.mutate(
+      { ticketId, userId },
+      {
+        onSettled: onClose,
+      },
+    );
   };
+
+  const isAssigning = assignUser.isPending;
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
@@ -57,7 +63,7 @@ export const AssignUserModal = ({
           Select a team member to handle ticket <b>#{ticketId}</b>.
         </Typography>
 
-        {usersQuery.isLoading ? (
+        {isLoading ? (
           <Box display="flex" justifyContent="center" py={2}>
             <CircularProgress size={24} />
           </Box>
@@ -74,7 +80,7 @@ export const AssignUserModal = ({
               <MenuItem value="">
                 <em>None / Unassigned</em>
               </MenuItem>
-              {users.map((user) => (
+              {users?.map((user) => (
                 <MenuItem key={user.id} value={user.id}>
                   {user.name}
                 </MenuItem>
@@ -95,7 +101,7 @@ export const AssignUserModal = ({
         <Button
           onClick={handleConfirm}
           variant="contained"
-          disabled={isAssigning || usersQuery.isLoading}
+          disabled={isAssigning || isLoading}
           sx={{ minWidth: 100, textTransform: "none" }}
         >
           {isAssigning ? (

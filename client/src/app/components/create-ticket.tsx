@@ -11,12 +11,12 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { AddCircleOutlineRounded } from "@mui/icons-material";
-import { useTickets } from "../hooks/useTickets";
+import { useCreateTicket } from "../hooks/useTickets";
 
 export const CreateTicketModal = () => {
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState("");
-  const { createTicket, isCreating } = useTickets();
+  const createTicket = useCreateTicket();
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
@@ -28,9 +28,11 @@ export const CreateTicketModal = () => {
     e.preventDefault();
     if (!description.trim()) return;
 
-    createTicket({ description });
+    createTicket.mutate({ description });
     handleClose();
   };
+
+  const isCreating = createTicket.isPending;
 
   return (
     <Box>

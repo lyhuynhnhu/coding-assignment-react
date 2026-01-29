@@ -25,6 +25,9 @@ interface TicketTableProps {
   data: Ticket[];
   isLoading?: boolean;
   updatingId: number | null;
+  mutationState: {
+    isPending: boolean;
+  };
   onView: (id: number) => void;
   onAssign: (ticketId: number, currentAssigneeId: number | null) => void;
   onToggleStatus: (ticketId: number, currentStatus: boolean) => void;
@@ -35,6 +38,7 @@ export const TicketTable = ({
   data,
   isLoading = false,
   updatingId,
+  mutationState,
   onView,
   onAssign,
   onToggleStatus,
@@ -63,7 +67,8 @@ export const TicketTable = ({
         </TableHead>
         <TableBody>
           {data.map((ticket) => {
-            const isRowUpdating = updatingId === ticket.id;
+            const isRowUpdating =
+              mutationState.isPending && updatingId === ticket.id;
 
             return (
               <TableRow key={ticket.id} hover>
@@ -82,12 +87,16 @@ export const TicketTable = ({
                   {ticket.assigneeId && getAssigneeName(ticket.assigneeId)}
                 </TableCell>
                 <TableCell>
-                  <Chip
-                    label={ticket.completed ? "Completed" : "Open"}
-                    color={ticket.completed ? "success" : "warning"}
-                    variant="outlined"
-                    size="small"
-                  />
+                  {isRowUpdating ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <Chip
+                      label={ticket.completed ? "Completed" : "Open"}
+                      color={ticket.completed ? "success" : "warning"}
+                      variant="outlined"
+                      size="small"
+                    />
+                  )}
                 </TableCell>
                 <TableCell align="right">
                   <Stack

@@ -22,7 +22,7 @@ import {
   RadioButtonUnchecked,
   Person,
 } from "@mui/icons-material";
-import { useTickets } from "../hooks/useTickets";
+import { useGetTicket, useToggleComplete } from "../hooks/useTickets";
 import { useUsers } from "../hooks/useUsers";
 
 export const TicketDetail = () => {
@@ -30,15 +30,14 @@ export const TicketDetail = () => {
   const navigate = useNavigate();
   const ticketId = Number(id);
 
-  const { getTicketById, toggleCompletion, completionMutation } = useTickets();
-  const { users } = useUsers();
-  const { data: ticket, isLoading, isError } = getTicketById(ticketId);
+  const { data: ticket, isLoading, isError } = useGetTicket(ticketId);
+  const toggleCompletion = useToggleComplete();
+  const { data: users } = useUsers();
 
-  const assignee = users.find((u) => u.id === ticket?.assigneeId);
+  const assignee = users?.find((u) => u.id === ticket?.assigneeId);
 
   const isUpdating =
-    completionMutation.isPending &&
-    completionMutation.variables?.ticketId === ticketId;
+    toggleCompletion.isPending && toggleCompletion.variables?.id === ticketId;
 
   if (isLoading)
     return (
@@ -121,12 +120,13 @@ export const TicketDetail = () => {
                       <CheckCircle />
                     )
                   }
-                  onClick={() =>
-                    toggleCompletion({
-                      ticketId: ticket.id,
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleCompletion.mutate({
+                      id: ticket.id,
                       completed: !ticket.completed,
-                    })
-                  }
+                    });
+                  }}
                   disabled={isUpdating}
                   sx={{ textTransform: "capitalize" }}
                 >

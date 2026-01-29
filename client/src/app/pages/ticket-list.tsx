@@ -10,22 +10,20 @@ import {
   CircularProgress,
   Alert,
 } from "@mui/material";
-import {
-  Refresh,
-} from "@mui/icons-material";
+import { Refresh } from "@mui/icons-material";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AssignUserModal, CreateTicketModal, TicketTable } from "../components";
-import { useTickets } from "../hooks/useTickets";
+import { useGetTickets, useToggleComplete } from "../hooks/useTickets";
 import { useUsers } from "../hooks/useUsers";
 
 export const TicketList = () => {
   const [filter, setFilter] = useState("all");
   const navigate = useNavigate();
-  const { getAllTicket, completionMutation } = useTickets();
-  const { users } = useUsers();
 
-  const { data: tickets, isLoading, isError, refetch } = getAllTicket;
+  const { data: tickets, isLoading, isError, refetch } = useGetTickets();
+  const toggleCompletion = useToggleComplete();
+  const { data: users } = useUsers();
 
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [assignDialog, setAssignDialog] = useState<{
@@ -40,7 +38,7 @@ export const TicketList = () => {
 
   const getAssigneeName = (userId: number | null) => {
     if (!userId) return "Unassigned";
-    return users.find((u) => u.id === userId)?.name || `User ${userId}`;
+    return users?.find((u) => u.id === userId)?.name || `User ${userId}`;
   };
 
   const filteredTickets = useMemo(() => {
@@ -71,9 +69,9 @@ export const TicketList = () => {
 
   const handleToggleStatus = (ticketId: number, currentStatus: boolean) => {
     setUpdatingId(ticketId);
-    completionMutation.mutate(
+    toggleCompletion.mutate(
       {
-        ticketId: ticketId,
+        id: ticketId,
         completed: !currentStatus,
       },
       {
@@ -137,6 +135,9 @@ export const TicketList = () => {
         data={filteredTickets}
         isLoading={isLoading}
         updatingId={updatingId}
+        mutationState={{
+          isPending: toggleCompletion.isPending,
+        }}
         getAssigneeName={getAssigneeName}
         onView={handleViewDetail}
         onAssign={handleOpenAssignModal}

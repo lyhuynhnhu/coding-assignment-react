@@ -1,172 +1,146 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ticket } from "@acme/shared-models";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ticketApi } from "../api/ticket";
 
-export const useTickets = () => {
-  const queryClient = useQueryClient();
-
-  const getAllTicket = useQuery({
+export const useGetTickets = () => {
+  return useQuery<Ticket[]>({
     queryKey: ["tickets"],
     queryFn: () => ticketApi.getAll(),
   });
+};
 
-  const getTicketById = (id: number) =>
-    useQuery({
-      queryKey: ["ticket", id],
-      queryFn: () => ticketApi.getById(id),
-      enabled: !!id,
-    });
+export const useGetTicket = (ticketId: number) => {
+  const qc = useQueryClient();
+  return useQuery<Ticket>({
+    queryKey: ["ticket", ticketId],
+    queryFn: () => ticketApi.getById(ticketId),
+    initialData: () => {
+      const tickets = qc.getQueryData<Ticket[]>(["tickets"]);
+      return tickets?.find((ticket) => ticket.id === ticketId);
+    },
+    enabled: !!ticketId,
+  });
+};
 
-  const createMutation = useMutation({
+export const useCreateTicket = () => {
+  const qc = useQueryClient();
+
+  return useMutation({
     mutationFn: (payload: { description: string }) => ticketApi.create(payload),
     onMutate: async ({ description }) => {
-      await queryClient.cancelQueries({ queryKey: ["tickets"] });
+      await qc.cancelQueries({ queryKey: ["tickets"] });
+      const prevTickets = qc.getQueryData<Ticket[]>(["tickets"]) || [];
 
-      const previousTickets = queryClient.getQueryData<Ticket[]>(["tickets"]);
+      const maxId =
+        prevTickets.length > 0 ? Math.max(...prevTickets.map((t) => t.id)) : 0;
+      const tempId = maxId + 1;
 
-      const currentId =
-        previousTickets && previousTickets.length > 0
-          ? Math.max(...previousTickets.map((t) => t.id))
-          : 0;
-
-      const newOptimisticTicket: Ticket = {
-        id: currentId + 1,
+      const temp: Ticket = {
+        id: tempId,
         description,
         assigneeId: null,
         completed: false,
       };
 
-      queryClient.setQueryData(["tickets"], (old: any) => [
-        ...(old || []),
-        newOptimisticTicket,
-      ]);
-
-      return { previousTickets };
+      qc.setQueryData(["tickets"], [temp, ...prevTickets]); // Thêm vào đầu danh sách
+      return { prevTickets };
     },
-    onError: (err, description, context) => {
-      queryClient.setQueryData(["tickets"], context?.previousTickets);
+    onError: (_err, _vars, context) => {
+      qc.setQueryData(["tickets"], context?.prevTickets);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["tickets"] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+    },
   });
+};
 
-  const assignMutation = useMutation({
-    mutationFn: ({ ticketId, userId }: { ticketId: number; userId?: number }) =>
+export const useAssignUser = () => {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      ticketId,
+      userId,
+    }: {
+      ticketId: number;
+      userId?: number;
+    }) =>
       typeof userId === "number"
         ? ticketApi.assign(ticketId, userId)
         : ticketApi.unassign(ticketId),
     onMutate: async ({ ticketId, userId }) => {
-      await queryClient.cancelQueries({ queryKey: ["tickets"] });
-      await queryClient.cancelQueries({ queryKey: ["ticket", ticketId] });
+      await qc.cancelQueries({ queryKey: ["tickets"] });
+      await qc.cancelQueries({ queryKey: ["ticket", ticketId] });
 
-      const previousTickets = queryClient.getQueryData<Ticket[]>(["tickets"]);
-      const previousDetail = queryClient.getQueryData<Ticket>([
-        "ticket",
-        ticketId,
-      ]);
+      const prevList = qc.getQueryData<Ticket[]>(["tickets"]) || [];
+      const prevTicket = qc.getQueryData<Ticket>(["ticket", ticketId]);
 
-      if (previousTickets) {
-        queryClient.setQueryData(["tickets"], (old: any) =>
-          old?.map((t: any) =>
+      if (prevList) {
+        qc.setQueryData(
+          ["tickets"],
+          prevList.map((t) =>
             t.id === ticketId ? { ...t, assigneeId: userId } : t,
           ),
         );
       }
-      if (previousDetail) {
-        queryClient.setQueryData(["ticket", ticketId], (old: any) =>
-          old ? { ...old, assigneeId: userId } : old,
+      if (prevTicket) {
+        qc.setQueryData(
+          ["ticket", ticketId],
+          userId
+            ? { ...prevTicket, assigneeId: userId }
+            : { ...prevTicket, assigneeId: null },
         );
       }
-
-      return { previousTickets, previousDetail };
+      return { prevTicket, prevList };
     },
-    onError: (err, variables, context) => {
-      if (context?.previousTickets) {
-        queryClient.setQueryData(["tickets"], context.previousTickets);
-      }
-      if (context?.previousDetail) {
-        queryClient.setQueryData(
-          ["ticket", variables.ticketId],
-          context.previousDetail,
-        );
-      }
+    onError: (_err, vars, context) => {
+      if (context?.prevList) qc.setQueryData(["tickets"], context.prevList);
+      if (context?.prevTicket)
+        qc.setQueryData(["ticket", vars.ticketId], context.prevTicket);
     },
-    onSettled: (data, err, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["tickets"] });
-      queryClient.invalidateQueries({
-        queryKey: ["ticket", variables.ticketId],
-      });
+    onSettled: (_data, _err, vars) => {
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+      qc.invalidateQueries({ queryKey: ["ticket", vars.ticketId] });
     },
   });
+};
 
-  const completionMutation = useMutation({
-    mutationKey: ["toggleStatus"],
-    mutationFn: ({
-      ticketId,
-      completed,
-    }: {
-      ticketId: number;
-      completed: boolean;
-    }) =>
-      completed ? ticketApi.complete(ticketId) : ticketApi.incomplete(ticketId),
-    onMutate: async ({ ticketId, completed }) => {
-      await queryClient.cancelQueries({ queryKey: ["tickets"] });
-      await queryClient.cancelQueries({ queryKey: ["ticket", ticketId] });
+export const useToggleComplete = () => {
+  const qc = useQueryClient();
 
-      const previousTickets = queryClient.getQueryData<Ticket[]>(["tickets"]);
-      const previousDetail = queryClient.getQueryData<Ticket>([
-        "ticket",
-        ticketId,
-      ]);
+  return useMutation({
+    mutationFn: async ({ id, completed }: { id: number; completed: boolean }) =>
+      completed ? ticketApi.complete(id) : ticketApi.incomplete(id),
+    onMutate: async ({ id, completed }) => {
+      await qc.cancelQueries({ queryKey: ["tickets"] });
+      await qc.cancelQueries({ queryKey: ["ticket", id] });
 
-      if (previousTickets) {
-        queryClient.setQueryData(
+      const prevList = qc.getQueryData<Ticket[]>(["tickets"]);
+      const prevTicket = qc.getQueryData<Ticket>(["ticket", id]);
+
+      if (prevList) {
+        qc.setQueryData<Ticket[]>(
           ["tickets"],
-          previousTickets.map((t) =>
-            t.id === ticketId ? { ...t, completed } : t,
-          ),
+          prevList.map((t) => (t.id === id ? { ...t, completed } : t)),
         );
       }
-      if (previousDetail) {
-        queryClient.setQueryData(["ticket", ticketId], {
-          ...previousDetail,
+      if (prevTicket) {
+        qc.setQueryData<Ticket>(["ticket", id], {
+          ...prevTicket,
           completed,
         });
       }
 
-      return { previousTickets, previousDetail };
+      return { prevList, prevTicket };
     },
-    onError: (err, variables, context) => {
-      if (context?.previousTickets) {
-        queryClient.setQueryData(["tickets"], context.previousTickets);
-      }
-      if (context?.previousDetail) {
-        queryClient.setQueryData(
-          ["ticket", variables.ticketId],
-          context.previousDetail,
-        );
-      }
+    onError: (_err, vars, context) => {
+      if (context?.prevList) qc.setQueryData(["tickets"], context.prevList);
+      if (context?.prevTicket)
+        qc.setQueryData(["ticket", vars.id], context.prevTicket);
     },
-    onSettled: (data, err, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["tickets"] });
-      queryClient.invalidateQueries({
-        queryKey: ["ticket", variables.ticketId],
-      });
+    onSettled: (_data, _err, vars) => {
+      qc.invalidateQueries({ queryKey: ["ticket", vars.id] });
+      qc.invalidateQueries({ queryKey: ["tickets"] });
     },
   });
-
-  return {
-    getAllTicket,
-
-    getTicketById,
-
-    createTicket: createMutation.mutateAsync,
-    isCreating: createMutation.isPending,
-
-    assignUser: assignMutation.mutateAsync,
-    isAssigning: assignMutation.isPending,
-
-    toggleCompletion: completionMutation.mutateAsync,
-    isChangingStatus: completionMutation.isPending,
-    completionMutation,
-  };
 };
