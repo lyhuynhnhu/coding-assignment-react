@@ -42,7 +42,7 @@ export const useCreateTicket = () => {
         completed: false,
       };
 
-      qc.setQueryData(["tickets"], [temp, ...prevTickets]); // Thêm vào đầu danh sách
+      qc.setQueryData(["tickets"], [...prevTickets, temp]);
       return { prevTickets };
     },
     onError: (_err, _vars, context) => {
