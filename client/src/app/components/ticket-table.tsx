@@ -57,12 +57,14 @@ export const TicketTable = ({
             },
           }}
         >
-          <TableRow sx={{ fontWeight: 500 }}>
-            <TableCell>ID</TableCell>
-            <TableCell>Description</TableCell>
-            <TableCell>Assignee</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell align="right">Actions</TableCell>
+          <TableRow>
+            <TableCell sx={{ width: "5%" }}>#</TableCell>
+            <TableCell sx={{ width: "50%" }}>Description</TableCell>
+            <TableCell sx={{ width: "15%" }}>Assignee</TableCell>
+            <TableCell sx={{ width: "15%" }}>Status</TableCell>
+            <TableCell align="right" sx={{ width: "15%", textAlign: "center" }}>
+              Actions
+            </TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -72,7 +74,7 @@ export const TicketTable = ({
 
             return (
               <TableRow key={ticket.id} hover>
-                <TableCell>#{ticket.id}</TableCell>
+                <TableCell>{ticket.id}</TableCell>
                 <TableCell
                   sx={{
                     maxWidth: 300,
