@@ -27,8 +27,8 @@ describe("AssignUserModal Component", () => {
     jest.clearAllMocks();
 
     mockUseUsers.mockReturnValue({
-      users: mockUsers,
-      usersQuery: { isLoading: false },
+      data: mockUsers,
+      isLoading: false,
     });
 
     mockUseAssignUser.mockReturnValue({
@@ -60,8 +60,8 @@ describe("AssignUserModal Component", () => {
     const selectControl = screen.getByLabelText(/Select User/i);
     fireEvent.mouseDown(selectControl);
 
-    const listbox = screen.getByRole("listbox");
-    const option = within(listbox).getByText("Alice");
+    const option = await screen.findByText("Alice");
+
     fireEvent.click(option);
 
     const confirmButton = screen.getByRole("button", { name: /Confirm/i });

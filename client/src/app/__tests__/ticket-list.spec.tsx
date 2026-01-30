@@ -33,7 +33,10 @@ describe("TicketList Component", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseUsers.mockReturnValue({ users: mockUsers });
+    mockUseUsers.mockReturnValue({
+      data: mockUsers,
+      isLoading: false,
+    });
     mockUseToggleComplete.mockReturnValue({
       mutate: mockMutate,
       isPending: false,
@@ -45,5 +48,6 @@ describe("TicketList Component", () => {
     render(<TicketList />, { wrapper: BrowserRouter });
 
     expect(screen.getByText("Crete test file")).toBeInTheDocument();
+    expect(screen.getByText("Alice")).toBeInTheDocument();
   });
 });
